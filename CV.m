@@ -3,7 +3,7 @@ close all
 clc
 
 %% TASK 2: Keypoint Corrspondences Between Images 
-img1 = imread("source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55 (1).jpeg");
+img1 = imread("source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55.jpeg");
 img2 = imread("source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55 (2).jpeg");
 
 img1_grey = im2gray(img1);
@@ -27,9 +27,17 @@ matched_points_im2 = feature_index_im2(feature_pairs(:, 2), :);
 figure;
 showMatchedFeatures(img1_grey, img2_grey, matched_points_im1, matched_points_im2, "montag")
 
-% Manual Feature Detection 
+% Manual Feature Detection
+% Note that these Manual points have been computed on the following images:
+% source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55.jpeg
+% source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55 (2).jpeg
+load manual_points.mat
+
 % [fixedPoints_img1, movingPoints_img2] = cpselect(img1, img2, 'Wait', true) 
-% showMatchedFeatures(img1, img2, fixedPoints_img1, movingPoints_img2, "montag")
+
+showMatchedFeatures(img1, img2, fixedPoints_img1, movingPoints_img2, "montag")
+
+% save manual_points.mat fixedPoints_img1 movingPoints_img2
 
 %% TASK 3: Camera Calibration 
 calibration_square_size = 2.2;      % 2.2cm on A4 paper
@@ -63,9 +71,15 @@ img2_HG = imread("source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55
 % 
 % figure, imshowpair(img1_grey,recovered,'montage')
 
+
+
+% NEVERMIND: I think I was being dumb and we can use the projtform2d()
+% function. See link below:
+% https://uk.mathworks.com/help/images/matrix-representation-of-geometric-transformations.html
+
 %% TASK 4: Transformation Estimation: Fundamental
-img1_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06 (1).jpeg");
-img2_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06 (2).jpeg");
+img1_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06.jpeg");
+img2_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06 (5).jpeg");
 
 img1_FD = im2gray(img1_FD);
 img2_FD = im2gray(img2_FD);
@@ -78,8 +92,10 @@ img2_FD = im2gray(img2_FD);
 % lines 
 
 % Automatic Feature Detection 
-corners_im1 = detectSURFFeatures(img1_FD);
-corners_im2 = detectSURFFeatures(img2_FD);
+% NOTE:
+% KAZE seems to detect the most points but all functionsare roughly inaccurate 
+corners_im1 = detectKAZEFeatures(img1_FD);
+corners_im2 = detectKAZEFeatures(img2_FD);
 
 [features_im1, feature_index_im1 ] = extractFeatures(img1_grey, corners_im1);
 [features_im2, feature_index_im2 ] = extractFeatures(img2_grey, corners_im2);
@@ -89,7 +105,36 @@ feature_pairs = matchFeatures(features_im1, features_im2);
 matched_points_im1 = feature_index_im1(feature_pairs(:, 1), :);
 matched_points_im2 = feature_index_im2(feature_pairs(:, 2), :);
 
-% Estimate Fundamental Matrix - NOT WORKING
-F = estimateFundamentalMatrix(matched_points_im1, matched_points_im2)
+figure;
+showMatchedFeatures(img1_FD, img2_FD, matched_points_im1, matched_points_im2, "montag")
+
+% Estimate Fundamental Matrix
+F = estimateFundamentalMatrix(matched_points_im1, matched_points_im2);
 
 %% TASK 5: 3D Geometry 
+% Load Images
+img1_FD = imread("source_images\WhatsApp Image 2024-03-10 at 11.38.32 (1).jpeg");
+img2_FD = imread("source_images\WhatsApp Image 2024-03-10 at 11.38.32.jpeg");
+
+% Rectifying Images
+% 
+
+% Estimating Depth
+% NOTE: Can use disprarityBM or disparitySGM
+
+A = stereoAnaglyph(img1_FD,img2_FD);
+figure
+imshow(A)
+title("Red-Cyan composite view of the rectified stereo pair image")
+
+J1 = im2gray(img1_FD);
+J2 = im2gray(img2_FD);
+
+disparityRange = [0 48];
+disparityMap = disparityBM(J1,J2);
+
+figure
+imshow(disparityMap,disparityRange)
+title("Disparity Map")
+colormap jet
+colorbar
