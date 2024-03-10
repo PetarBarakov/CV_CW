@@ -46,40 +46,64 @@ calibration_square_size = 2.2;      % 2.2cm on A4 paper
 
 
 %% TASK 4: Transformation Estimation: Homography
-img1_HG = imread("source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55 (1).jpeg");
-img2_HG = imread("source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55 (2).jpeg");
+ref_HG = imread("source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55 (1).jpeg");
+warp_HG = imread("source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55 (2).jpeg");
 
-% The code below gives an estimation for the AFFINE transformation and not
-% the HOMOGRAPHY matrix. Googling seems that we have to solve the following 
-% equation where x' = Hx where x and x' take the form [x, y, 1]. 
-% This then gives us a system of equations we can solve to get our
-% parameters of H. To solve we need at least 4 matched points. 
+ref_grey = im2gray(ref_HG);
+warp_grey = im2gray(warp_HG);
 
-% There are also references to using the Direct Linear Transformation
-% https://medium.com/@insight-in-plain-sight/estimating-the-homography-matrix-with-the-direct-linear-transform-dlt-ec6bbb82ee2b
-% https://www.youtube.com/watch?v=Hi9EFtzPl8Y
+% Automatic Feature Detection 
+corners_ref = detectSURFFeatures(ref_grey);
+corners_warp = detectSURFFeatures(warp_grey);
 
-% [tform,inlierIdx] = estgeotform2d(matched_points_im1, matched_points_im2,"similarity");
-% inlier_pts_im1 = matched_points_im1(inlierIdx,:);
-% inlier_pts_im2  = matched_points_im2(inlierIdx,:);
-% 
-% showMatchedFeatures(img1_grey, img2_grey, inlier_pts_im1, inlier_pts_im2)
-% title("Matched Inlier Points")
-% 
-% outputView = imref2d(size(img1_grey));
-% recovered = imwarp(img2_grey,tform,OutputView=outputView);
-% 
-% figure, imshowpair(img1_grey,recovered,'montage')
+[features_ref, feature_index_ref] = extractFeatures(ref_grey, corners_ref);
+[features_warp, feature_index_warp] = extractFeatures(warp_grey, corners_warp);
 
+feature_pairs = matchFeatures(features_ref, features_warp);
 
+matched_points_ref = feature_index_ref(feature_pairs(:, 1));
+matched_points_warp = feature_index_warp(feature_pairs(:, 2));
+
+% Keep All Points and Transform:
+figure;
+showMatchedFeatures(ref_grey, warp_grey, matched_points_ref, matched_points_warp, "montag")
+title("All Matched Features")
+
+[tform_HG, inlierIdx] = estgeotform2d(matched_points_warp, matched_points_ref,"projective");
+showMatchedFeatures(ref_grey, warp_grey, matched_points_ref, matched_points_warp)
+
+outputView = imref2d(size(ref_grey));
+recovered = imwarp(warp_grey,tform_HG,OutputView=outputView);
+
+figure;
+imshowpair(ref_grey,recovered)
+title("Overlay of Ref Image vs Transformed Image")
+
+figure;
+imshowpair(warp_grey,recovered)
+title("Overlay of Original Image vs Transformed Image")
+
+% Removes Outliers and Transform:
+matched_points_ref_inliers = matched_points_ref(inlierIdx,:);
+matched_points_warp_inliers = matched_points_warp(inlierIdx,:);
+ 
+showMatchedFeatures(ref_grey, warp_grey, matched_points_ref_inliers, matched_points_warp_inliers)
+title("Matched Inlier Points")
+
+tform_HG_inliers = fitgeotform2d(matched_points_warp_inliers.Location, matched_points_ref_inliers.Location,"projective");
+recovered_inliers = imwarp(warp_grey,tform_HG_inliers,OutputView=outputView);
+
+figure;
+imshowpair(warp_grey,recovered_inliers)
+title("Overlay of Original Image vs Transformed Image - INLIERS ONLY")
 
 % NEVERMIND: I think I was being dumb and we can use the projtform2d()
 % function. See link below:
 % https://uk.mathworks.com/help/images/matrix-representation-of-geometric-transformations.html
 
 %% TASK 4: Transformation Estimation: Fundamental
-img1_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06.jpeg");
-img2_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06 (5).jpeg");
+img1_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06 (6).jpeg");
+img2_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06 (7).jpeg");
 
 img1_FD = im2gray(img1_FD);
 img2_FD = im2gray(img2_FD);
@@ -113,8 +137,8 @@ F = estimateFundamentalMatrix(matched_points_im1, matched_points_im2);
 
 %% TASK 5: 3D Geometry 
 % Load Images
-img1_FD = imread("source_images\WhatsApp Image 2024-03-10 at 11.38.32 (1).jpeg");
-img2_FD = imread("source_images\WhatsApp Image 2024-03-10 at 11.38.32.jpeg");
+img1_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06 (6).jpeg");
+img2_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06 (7).jpeg");
 
 % Rectifying Images
 % 
