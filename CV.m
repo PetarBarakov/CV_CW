@@ -6,6 +6,9 @@ clc
 img1 = imread("source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55.jpeg");
 img2 = imread("source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55 (2).jpeg");
 
+img1 = undistortImage(img1, camera_params);
+img2 = undistortImage(img2, camera_params);
+
 img1_grey = im2gray(img1);
 img2_grey = im2gray(img2);
 
@@ -13,8 +16,10 @@ img2_grey = im2gray(img2);
 corners_im1 = detectSURFFeatures(img1_grey);
 corners_im2 = detectSURFFeatures(img2_grey);
 
-% NOTE: Algorithms that work well on Image (1) and Image (6) are: Harris, 
-% MinEigen, ORB (works quite well for features inside of the object)
+% NOTE: For the image set of source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55.jpeg
+%       and source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55 (2).jpeg
+%       the best (and visually accurate) feature detection is SURF
+
 
 [features_im1, feature_index_im1 ] = extractFeatures(img1_grey, corners_im1);
 [features_im2, feature_index_im2 ] = extractFeatures(img2_grey, corners_im2);
@@ -29,17 +34,19 @@ showMatchedFeatures(img1_grey, img2_grey, matched_points_im1, matched_points_im2
 
 % Manual Feature Detection
 % Note that these Manual points have been computed on the following images:
-% source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55.jpeg
+% source_images\HG _no_grid\WhatsApp Image 2024-03-08 at 18.01.55.jpeg
 % source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55 (2).jpeg
 load manual_points.mat
 
 % [fixedPoints_img1, movingPoints_img2] = cpselect(img1, img2, 'Wait', true) 
 % save manual_points.mat fixedPoints_img1 movingPoints_img2
 
+figure;
 showMatchedFeatures(img1, img2, fixedPoints_img1, movingPoints_img2, "montag")
 
 %% TASK 3: Camera Calibration 
 calibration_square_size = 2.2;      % 2.2cm on A4 paper
+load("camera_params.mat");
 % cameraCalibrator("source_images\all_1D_grid\", calibration_square_size);
 % cameraCalibrator("source_images\1d_grid\", calibration_square_size);
 
