@@ -47,8 +47,8 @@ showMatchedFeatures(img1, img2, fixedPoints_img1, movingPoints_img2, "montag")
 
 %% TASK 3: Camera Calibration 
 calibration_square_size = 2.2;      % 2.2cm on A4 paper
-load("camera_params.mat");
-% cameraCalibrator("source_images\all_1D_grid\", calibration_square_size);
+% load("camera_params.mat");
+cameraCalibrator("source_images\all_1D_grid\", calibration_square_size);
 % cameraCalibrator("source_images\1d_grid\", calibration_square_size);
 
 
@@ -93,7 +93,8 @@ title("Overlay of Original Image vs Transformed Image")
 % Removes Outliers and Transform:
 matched_points_ref_inliers = matched_points_ref(inlierIdx,:);
 matched_points_warp_inliers = matched_points_warp(inlierIdx,:);
- 
+
+figure;
 showMatchedFeatures(ref_grey, warp_grey, matched_points_ref_inliers, matched_points_warp_inliers)
 title("Matched Inlier Points")
 
