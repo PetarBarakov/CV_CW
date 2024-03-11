@@ -6,8 +6,8 @@ clc
 img1 = imread("source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55.jpeg");
 img2 = imread("source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55 (2).jpeg");
 
-img1 = undistortImage(img1, camera_params);
-img2 = undistortImage(img2, camera_params);
+img1 = undistortImage(img1, cameraParams);
+img2 = undistortImage(img2, cameraParams);
 
 img1_grey = im2gray(img1);
 img2_grey = im2gray(img2);
@@ -46,10 +46,38 @@ showMatchedFeatures(img1, img2, fixedPoints_img1, movingPoints_img2, "montag")
 % save manual_points.mat fixedPoints_img1 movingPoints_img2
 
 %% TASK 3: Camera Calibration 
-calibration_square_size = 2.2;      % 2.2cm on A4 paper
+% calibration_square_size = 2.2;      % 2.2cm on A4 paper
 % load("camera_params.mat");
-cameraCalibrator("source_images\all_1D_grid\", calibration_square_size);
+% cameraCalibrator("source_images\all_1D_grid\", calibration_square_size);
 % cameraCalibrator("source_images\1d_grid\", calibration_square_size);
+
+% Define images to process
+imageFileNames = {'source_images\1d_grid\WhatsApp Image 2024-03-08 at 18.23.30 (1).jpeg',...
+    'source_images\1d_grid\WhatsApp Image 2024-03-08 at 18.23.30.jpeg',...
+    'source_images\1d_grid\WhatsApp Image 2024-03-08 at 18.23.31 (1).jpeg',...
+    'source_images\1d_grid\WhatsApp Image 2024-03-08 at 18.23.31.jpeg',...
+    'source_images\1d_grid\WhatsApp Image 2024-03-08 at 18.23.32 (1).jpeg',...
+    'source_images\1d_grid\WhatsApp Image 2024-03-08 at 18.23.32.jpeg',...
+    };
+% Detect calibration pattern in images
+detector = vision.calibration.monocular.CheckerboardDetector();
+[imagePoints, imagesUsed] = detectPatternPoints(detector, imageFileNames);
+imageFileNames = imageFileNames(imagesUsed);
+
+% Read the first image to obtain image size
+originalImage = imread(imageFileNames{1});
+[mrows, ncols, ~] = size(originalImage);
+
+% Generate world coordinates for the planar pattern keypoints
+squareSize = 2.200000e+00;  % in units of 'mm'
+worldPoints = generateWorldPoints(detector, 'SquareSize', squareSize);
+
+% Calibrate the camera
+[cameraParams, imagesUsed, estimationErrors] = estimateCameraParameters(imagePoints, worldPoints, ...
+    'EstimateSkew', false, 'EstimateTangentialDistortion', false, ...
+    'NumRadialDistortionCoefficients', 2, 'WorldUnits', 'mm', ...
+    'InitialIntrinsicMatrix', [], 'InitialRadialDistortion', [], ...
+    'ImageSize', [mrows, ncols]);
 
 
 %% TASK 4: Transformation Estimation: Homography
