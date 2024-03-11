@@ -110,8 +110,8 @@ title("Overlay of Ref Image vs Transformed Image - INLIERS")
 % TODO: Epipoles, vanishing points and horizon
 % TODO: Find out how many outliers the estimation method tolerates
 
-left_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06 (4).jpeg");
-right_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06 (5).jpeg");
+left_FD = imread("source_images\FD_no_grid_v2\Image (1).jpg");
+right_FD = imread("source_images\FD_no_grid_v2\Image (7).jpg");
 
 left_FD = im2gray(left_FD);
 right_FD = im2gray(right_FD);
@@ -170,15 +170,14 @@ title('Matched Points and Epipolar Lines in Second Image'); hold on;
 epiLines = epipolarLine(fLMedS,matched_points_left(inliers,:));
 points = lineToBorderPoints(epiLines,size(right_FD));
 line(points(:,[1,3])',points(:,[2,4])');
-truesize;
 
 % Plot Matched Points 
 scatter(matched_points_right_inliers.Location(:, 1), matched_points_right_inliers.Location(:, 2), 'MarkerFaceColor', 'r')
 
 %% TASK 5: 3D Geometry 
 % Load Images
-img1_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06 (6).jpeg");
-img2_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06 (7).jpeg");
+img1_FD = imread("source_images\FD_no_grid_v2\Image (7).jpg");
+img2_FD = imread("source_images\FD_no_grid_v2\Image (8).jpg");
 
 % Rectifying Images
 % 
@@ -194,7 +193,7 @@ title("Red-Cyan composite view of the rectified stereo pair image")
 J1 = im2gray(img1_FD);
 J2 = im2gray(img2_FD);
 
-disparityRange = [0 48];
+disparityRange = [0 100];
 disparityMap = disparityBM(J1,J2);
 
 figure
