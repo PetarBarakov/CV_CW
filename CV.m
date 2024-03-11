@@ -73,10 +73,12 @@ matched_points_warp = feature_index_warp(feature_pairs(:, 2));
 % Keep All Points and Transform:
 figure;
 showMatchedFeatures(ref_grey, warp_grey, matched_points_ref, matched_points_warp, "montag")
-title("All Matched Features")
 
 [tform_HG, inlierIdx] = estgeotform2d(matched_points_warp, matched_points_ref,"projective");
+
+figure;
 showMatchedFeatures(ref_grey, warp_grey, matched_points_ref, matched_points_warp)
+title("All Matched Features")
 
 outputView = imref2d(size(ref_grey));
 recovered = imwarp(warp_grey,tform_HG,OutputView=outputView);
@@ -101,8 +103,8 @@ tform_HG_inliers = fitgeotform2d(matched_points_warp_inliers.Location, matched_p
 recovered_inliers = imwarp(warp_grey,tform_HG_inliers,OutputView=outputView);
 
 figure;
-imshowpair(ref_grey,recovered)
-title("Overlay of Ref Image vs Transformed Image")
+imshowpair(ref_grey,recovered_inliers)
+title("Overlay of Ref Image vs Transformed Image - INLIERS")
 
 %% TASK 4: Transformation Estimation: Fundamental
 % TODO: Epipoles, vanishing points and horizon
