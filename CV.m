@@ -6,8 +6,11 @@ clc
 img1 = imread("source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55.jpeg");
 img2 = imread("source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55 (2).jpeg");
 
-img1 = undistortImage(img1, cameraParams);
-img2 = undistortImage(img2, cameraParams);
+% img1 = imresize(img1, [2048, 1536]);
+% img2 = imresize(img2, [2048, 1536]);
+
+% img1 = undistortImage(img1, cameraParams);
+% img2 = undistortImage(img2, cameraParams);
 
 img1_grey = im2gray(img1);
 img2_grey = im2gray(img2);
@@ -40,16 +43,18 @@ load manual_points.mat
 
 % [fixedPoints_img1, movingPoints_img2] = cpselect(img1, img2, 'Wait', true) 
 % save manual_points.mat fixedPoints_img1 movingPoints_img2
-
+    
 figure;
 showMatchedFeatures(img1, img2, fixedPoints_img1, movingPoints_img2, "montag")
 
-%% TASK 3: Camera Calibration 
-% calibration_square_size = 2.2;      % 2.2cm on A4 paper
+%% TASK 3: MANUAL Camera Calibration 
+calibration_square_size = 22;      % 22mm on A4 paper
 % load("camera_params.mat");
 % cameraCalibrator("source_images\all_1D_grid\", calibration_square_size);
-% cameraCalibrator("source_images\1d_grid\", calibration_square_size);
+cameraCalibrator("source_images\1d_grid\", calibration_square_size);
 
+
+%% TASK 3; AUTOMATIC Camera Calibration 
 % Define images to process
 imageFileNames = {'source_images\1d_grid\WhatsApp Image 2024-03-08 at 18.23.30 (1).jpeg',...
     'source_images\1d_grid\WhatsApp Image 2024-03-08 at 18.23.30.jpeg',...
@@ -68,7 +73,7 @@ originalImage = imread(imageFileNames{1});
 [mrows, ncols, ~] = size(originalImage);
 
 % Generate world coordinates for the planar pattern keypoints
-squareSize = 2.200000e+00;  % in units of 'mm'
+squareSize = 22;  % in units of 'mm'
 worldPoints = generateWorldPoints(detector, 'SquareSize', squareSize);
 
 % Calibrate the camera
@@ -203,10 +208,24 @@ truesize;
 % Plot Matched Points 
 scatter(matched_points_right_inliers.Location(:, 1), matched_points_right_inliers.Location(:, 2), 'MarkerFaceColor', 'r')
 
+
+%% Stereo Camera Calibration
+
+stereoCameraCalibrator('source_images\stereo_camera_1\', "source_images\stereo_camera_2\")
+
+
 %% TASK 5: 3D Geometry 
+
 % Load Images
 img1_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06 (6).jpeg");
 img2_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06 (7).jpeg");
+
+img1_FD = imresize(img1_FD, [2048, 1536]);
+img2_FD = imresize(img2_FD, [2048, 1536]);
+
+img1_FD = undistortImage(img1_FD, cameraParams);
+img2_FD = undistortImage(img2_FD, cameraParams);
+
 
 % Rectifying Images
 % 
