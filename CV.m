@@ -39,11 +39,10 @@ showMatchedFeatures(img1_grey, img2_grey, matched_points_im1, matched_points_im2
 load manual_points.mat
 
 % [fixedPoints_img1, movingPoints_img2] = cpselect(img1, img2, 'Wait', true) 
+% save manual_points.mat fixedPoints_img1 movingPoints_img2
 
 figure;
 showMatchedFeatures(img1, img2, fixedPoints_img1, movingPoints_img2, "montag")
-
-% save manual_points.mat fixedPoints_img1 movingPoints_img2
 
 %% TASK 3: Camera Calibration 
 % calibration_square_size = 2.2;      % 2.2cm on A4 paper
@@ -102,10 +101,12 @@ matched_points_warp = feature_index_warp(feature_pairs(:, 2));
 % Keep All Points and Transform:
 figure;
 showMatchedFeatures(ref_grey, warp_grey, matched_points_ref, matched_points_warp, "montag")
-title("All Matched Features")
 
 [tform_HG, inlierIdx] = estgeotform2d(matched_points_warp, matched_points_ref,"projective");
+
+figure;
 showMatchedFeatures(ref_grey, warp_grey, matched_points_ref, matched_points_warp)
+title("All Matched Features")
 
 outputView = imref2d(size(ref_grey));
 recovered = imwarp(warp_grey,tform_HG,OutputView=outputView);
@@ -130,46 +131,77 @@ tform_HG_inliers = fitgeotform2d(matched_points_warp_inliers.Location, matched_p
 recovered_inliers = imwarp(warp_grey,tform_HG_inliers,OutputView=outputView);
 
 figure;
-imshowpair(warp_grey,recovered_inliers)
-title("Overlay of Original Image vs Transformed Image - INLIERS ONLY")
-
-% NEVERMIND: I think I was being dumb and we can use the projtform2d()
-% function. See link below:
-% https://uk.mathworks.com/help/images/matrix-representation-of-geometric-transformations.html
+imshowpair(ref_grey,recovered_inliers)
+title("Overlay of Ref Image vs Transformed Image - INLIERS")
 
 %% TASK 4: Transformation Estimation: Fundamental
-img1_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06 (6).jpeg");
-img2_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06 (7).jpeg");
+% TODO: Epipoles, vanishing points and horizon
+% TODO: Find out how many outliers the estimation method tolerates
 
-img1_FD = im2gray(img1_FD);
-img2_FD = im2gray(img2_FD);
+left_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06 (4).jpeg");
+right_FD = imread("source_images\FD_no_grid\WhatsApp Image 2024-03-08 at 18.14.06 (5).jpeg");
 
-% We have to solve the following  equation where x'Fx = 0 where x and x' 
-% take the form [x, y, 1]. This then gives us a system of equations we can 
-% solve to get our parameters of F. 
-% Useful Link: https://uk.mathworks.com/help/vision/ref/epipolarline.html
-% Link shows how to calculate fundamental matrix, epipoles and epipolar
-% lines 
+left_FD = im2gray(left_FD);
+right_FD = im2gray(right_FD);
 
 % Automatic Feature Detection 
-% NOTE:
-% KAZE seems to detect the most points but all functionsare roughly inaccurate 
-corners_im1 = detectKAZEFeatures(img1_FD);
-corners_im2 = detectKAZEFeatures(img2_FD);
+corners_left = detectSURFFeatures(left_FD);
+corners_right = detectSURFFeatures(right_FD);
 
-[features_im1, feature_index_im1 ] = extractFeatures(img1_grey, corners_im1);
-[features_im2, feature_index_im2 ] = extractFeatures(img2_grey, corners_im2);
+[features_left, feature_index_left] = extractFeatures(left_FD, corners_left);
+[features_right, feature_index_right] = extractFeatures(right_FD, corners_right);
 
-feature_pairs = matchFeatures(features_im1, features_im2);
+feature_pairs = matchFeatures(features_left, features_right);
 
-matched_points_im1 = feature_index_im1(feature_pairs(:, 1), :);
-matched_points_im2 = feature_index_im2(feature_pairs(:, 2), :);
-
-figure;
-showMatchedFeatures(img1_FD, img2_FD, matched_points_im1, matched_points_im2, "montag")
+matched_points_left = feature_index_left(feature_pairs(:, 1));
+matched_points_right = feature_index_right(feature_pairs(:, 2));
 
 % Estimate Fundamental Matrix
-F = estimateFundamentalMatrix(matched_points_im1, matched_points_im2);
+% Compute the fundamental matrix. It uses the least median of squares 
+% method to find the inliers. There is option to use RANSAC too
+[fLMedS,inliers] = estimateFundamentalMatrix(matched_points_left, matched_points_right,'NumTrials',4000);
+
+matched_points_left_inliers = matched_points_left(inliers,:);
+matched_points_right_inliers = matched_points_right(inliers,:);
+
+% First Image
+% Show the inliers in the first image.
+figure; 
+subplot(121);
+imshow(left_FD); 
+title('Matched Points and Epipolar Lines in First Image'); 
+hold on;
+
+% Compute the epipolar lines in the first image.
+epiLines = epipolarLine(fLMedS',matched_points_right(inliers,:));
+points = lineToBorderPoints(epiLines,size(left_FD));
+line(points(:,[1,3])',points(:,[2,4])');
+
+% Valid epipole logical, specified as true when the image contains an 
+% epipole, and false when the image does not contain an epipole. When the 
+% image planes are at a great enough angle to each other, you can expect 
+% the epipole to be located in the image. When the image planes are at a 
+% more subtle angle to each other, you can expect the epipole to be 
+% located outside of the image, (but still in the image plane).
+[isIn,epipole] = isEpipoleInImage(fLMedS, size(left_FD));
+scatter(epipole(:, 1), epipole(:, 2), 'MarkerFaceColor', 'b')
+
+% Plot Matched Points
+scatter(matched_points_left_inliers.Location(:, 1), matched_points_left_inliers.Location(:, 2), 'MarkerFaceColor', 'g')
+
+% Second Image
+subplot(122); 
+imshow(right_FD);
+title('Matched Points and Epipolar Lines in Second Image'); hold on;
+
+% Plot Epipolar Lines
+epiLines = epipolarLine(fLMedS,matched_points_left(inliers,:));
+points = lineToBorderPoints(epiLines,size(right_FD));
+line(points(:,[1,3])',points(:,[2,4])');
+truesize;
+
+% Plot Matched Points 
+scatter(matched_points_right_inliers.Location(:, 1), matched_points_right_inliers.Location(:, 2), 'MarkerFaceColor', 'r')
 
 %% TASK 5: 3D Geometry 
 % Load Images
