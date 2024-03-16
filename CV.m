@@ -45,7 +45,7 @@ load manual_points.mat
 % save manual_points.mat fixedPoints_img1 movingPoints_img2
     
 figure;
-showMatchedFeatures(img1, img2, fixedPoints_img1, movingPoints_img2, "montag")
+showMatchedFeatures(img1_grey, img2_grey, fixedPoints_img1, movingPoints_img2, "montag")
 
 %% TASK 3: MANUAL Camera Calibration 
 calibration_square_size = 22;      % 22mm on A4 paper
@@ -142,9 +142,8 @@ title("Overlay of Ref Image vs Transformed Image - INLIERS")
 %% TASK 4: Transformation Estimation: Fundamental
 % TODO: Epipoles, vanishing points and horizon
 % TODO: Find out how many outliers the estimation method tolerates
-
-left_FD = imread("source_images\FD_no_grid_v2\Image (1).jpg");
-right_FD = imread("source_images\FD_no_grid_v2\Image (7).jpg");
+left_FD = imread("source_images\additional_FD\11_03_24 (1).png");
+right_FD = imread("source_images\additional_FD\11_03_24  (2).png");
 
 left_FD = im2gray(left_FD);
 right_FD = im2gray(right_FD);
@@ -209,36 +208,47 @@ scatter(matched_points_right_inliers.Location(:, 1), matched_points_right_inlier
 
 
 %% Stereo Camera Calibration
-
-stereoCameraCalibrator('source_images\stereo_camera_1\', "source_images\stereo_camera_2\")
+% stereoCameraCalibrator('source_images\stereo_camera_1\', "source_images\stereo_camera_2\")
 
 
 %% TASK 5: 3D Geometry 
-
 % Load Images
-img1_FD = imread("source_images\FD_no_grid_v2\Image (7).jpg");
-img2_FD = imread("source_images\FD_no_grid_v2\Image (8).jpg");
+img1_FD = imread("source_images\additional_FD\11_03_24  (2).png");
+img2_FD = imread("source_images\additional_FD\11_03_24 (1).png");
 
-img1_FD = imresize(img1_FD, [2048, 1536]);
-img2_FD = imresize(img2_FD, [2048, 1536]);
+img1_FD_valid = imresize(img1_FD, [2048, 1536]);
+img2_FD_valid = imresize(img2_FD, [2048, 1536]);
 
-img1_FD = undistortImage(img1_FD, cameraParams);
-img2_FD = undistortImage(img2_FD, cameraParams);
-
+% img1_FD = undistortImage(img1_FD, cameraParams);
+% img2_FD = undistortImage(img2_FD, cameraParams);
 
 % Rectifying Images
+% leftImages = imageDatastore("source_images\left\");
+% rightImages = imageDatastore("source_images\right\");
 % 
+% [imagePoints,boardSize] = detectCheckerboardPoints(leftImages.Files,rightImages.Files);
+% 
+% squareSizeInMillimeters = 22;  % in units of 'mm'
+% worldPoints = generateCheckerboardPoints(boardSize,squareSizeInMillimeters);
+% 
+% I1 = readimage(leftImages,1);
+% I2 = readimage(rightImages,1);
+% imageSize = [size(I1,1),size(I1,2)];
+% 
+% stereoParams = estimateCameraParameters(imagePoints,worldPoints,ImageSize=imageSize);
+% 
+% [img1_FD_valid, img2_FD_valid] = rectifyStereoImages(img1_FD, img2_FD, stereoParams, OutputView='valid');
 
 % Estimating Depth
 % NOTE: Can use disprarityBM or disparitySGM
 
-A = stereoAnaglyph(img1_FD,img2_FD);
+A = stereoAnaglyph(img1_FD_valid,img2_FD_valid);
 figure
 imshow(A)
-title("Red-Cyan composite view of the rectified stereo pair image")
+title("Red-Cyan Composite View of the Rectified Stereo Pair Image")
 
-J1 = im2gray(img1_FD);
-J2 = im2gray(img2_FD);
+J1 = im2gray(img1_FD_valid);
+J2 = im2gray(img2_FD_valid);
 
 disparityRange = [0 100];
 disparityMap = disparityBM(J1,J2);
