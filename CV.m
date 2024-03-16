@@ -1,3 +1,4 @@
+%% --------------------
 clear all
 close all
 clc
@@ -5,12 +6,6 @@ clc
 %% TASK 2: Keypoint Corrspondences Between Images 
 img1 = imread("source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55.jpeg");
 img2 = imread("source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55 (2).jpeg");
-
-% img1 = imresize(img1, [2048, 1536]);
-% img2 = imresize(img2, [2048, 1536]);
-
-% img1 = undistortImage(img1, cameraParams);
-% img2 = undistortImage(img2, cameraParams);
 
 img1_grey = im2gray(img1);
 img2_grey = im2gray(img2);
@@ -54,34 +49,47 @@ calibration_square_size = 22;      % 22mm on A4 paper
 cameraCalibrator("source_images\1d_grid\", calibration_square_size);
 
 
-%% TASK 3; AUTOMATIC Camera Calibration 
+%% TASK 3: AUTOMATIC Camera Calibration 
 % Define images to process
-imageFileNames = {'source_images\1d_grid\WhatsApp Image 2024-03-08 at 18.23.30 (1).jpeg',...
+StandardGridImages = {'source_images\1d_grid\WhatsApp Image 2024-03-08 at 18.23.30 (1).jpeg',...
     'source_images\1d_grid\WhatsApp Image 2024-03-08 at 18.23.30.jpeg',...
     'source_images\1d_grid\WhatsApp Image 2024-03-08 at 18.23.31 (1).jpeg',...
     'source_images\1d_grid\WhatsApp Image 2024-03-08 at 18.23.31.jpeg',...
     'source_images\1d_grid\WhatsApp Image 2024-03-08 at 18.23.32 (1).jpeg',...
     'source_images\1d_grid\WhatsApp Image 2024-03-08 at 18.23.32.jpeg',...
     };
-% Detect calibration pattern in images
-detector = vision.calibration.monocular.CheckerboardDetector();
-[imagePoints, imagesUsed] = detectPatternPoints(detector, imageFileNames);
-imageFileNames = imageFileNames(imagesUsed);
 
-% Read the first image to obtain image size
-originalImage = imread(imageFileNames{1});
-[mrows, ncols, ~] = size(originalImage);
+CameraGridParameters = CalibrateFromSquare(StandardGridImages);
 
-% Generate world coordinates for the planar pattern keypoints
-squareSize = 22;  % in units of 'mm'
-worldPoints = generateWorldPoints(detector, 'SquareSize', squareSize);
 
-% Calibrate the camera
-[cameraParams, imagesUsed, estimationErrors] = estimateCameraParameters(imagePoints, worldPoints, ...
-    'EstimateSkew', false, 'EstimateTangentialDistortion', false, ...
-    'NumRadialDistortionCoefficients', 2, 'WorldUnits', 'mm', ...
-    'InitialIntrinsicMatrix', [], 'InitialRadialDistortion', [], ...
-    'ImageSize', [mrows, ncols]);
+% Use same imagaes as in task 2
+img1 = imread("source_images\HG_no_grid\WhatsApp Image 2024-03-08 at 18.01.55.jpeg");  
+img1 = imresize(img1, [2048, 1536]);
+img1_undistorted = undistortImage(img1, CameraGridParameters);
+
+figure
+montage({img1, img1_undistorted})
+title("Distortion of the camera")
+
+
+% cameraCalibrator("source_images\wide_angle\wide_angle_grid\", squareSize);
+WideAngleGridImages = {'source_images\wide_angle\wide_angle_grid\IMG_20240316_144831.jpg',...
+    'source_images\wide_angle\wide_angle_grid\IMG_20240316_144833.jpg',...
+    'source_images\wide_angle\wide_angle_grid\IMG_20240316_144836.jpg',...
+    'source_images\wide_angle\wide_angle_grid\IMG_20240316_144838.jpg',...
+    'source_images\wide_angle\wide_angle_grid\IMG_20240316_144842.jpg',...
+    'source_images\wide_angle\wide_angle_grid\IMG_20240316_144845.jpg',...
+    'source_images\wide_angle\wide_angle_grid\IMG_20240316_144847.jpg',...
+    'source_images\wide_angle\wide_angle_grid\IMG_20240316_144854.jpg',...
+    };
+
+WideAngleGridParameters = CalibrateFromSquare(WideAngleGridImages);
+img_wide=imread("source_images\wide_angle\IMG_20240316_145002.jpg");
+img_wide_undistorted = undistortImage(img_wide, WideAngleGridParameters);
+
+figure
+montage({img_wide, img_wide_undistorted})
+title("Distortion of a Wide-Angle Camera")
 
 
 %% TASK 4: Transformation Estimation: Homography
@@ -223,21 +231,21 @@ img2_FD_valid = imresize(img2_FD, [2048, 1536]);
 % img2_FD = undistortImage(img2_FD, cameraParams);
 
 % Rectifying Images
-% leftImages = imageDatastore("source_images\left\");
-% rightImages = imageDatastore("source_images\right\");
-% 
-% [imagePoints,boardSize] = detectCheckerboardPoints(leftImages.Files,rightImages.Files);
-% 
-% squareSizeInMillimeters = 22;  % in units of 'mm'
-% worldPoints = generateCheckerboardPoints(boardSize,squareSizeInMillimeters);
-% 
-% I1 = readimage(leftImages,1);
-% I2 = readimage(rightImages,1);
-% imageSize = [size(I1,1),size(I1,2)];
-% 
-% stereoParams = estimateCameraParameters(imagePoints,worldPoints,ImageSize=imageSize);
-% 
-% [img1_FD_valid, img2_FD_valid] = rectifyStereoImages(img1_FD, img2_FD, stereoParams, OutputView='valid');
+leftImages = imageDatastore("source_images\left\");
+rightImages = imageDatastore("source_images\right\");
+
+[imagePoints,boardSize] = detectCheckerboardPoints(leftImages.Files,rightImages.Files);
+
+squareSizeInMillimeters = 22;  % in units of 'mm'
+worldPoints = generateCheckerboardPoints(boardSize,squareSizeInMillimeters);
+
+I1 = readimage(leftImages,1);
+I2 = readimage(rightImages,1);
+imageSize = [size(I1,1),size(I1,2)];
+
+stereoParams = estimateCameraParameters(imagePoints,worldPoints,ImageSize=imageSize);
+
+[img1_FD_valid, img2_FD_valid] = rectifyStereoImages(img1_FD, img2_FD, stereoParams, OutputView='valid');
 
 % Estimating Depth
 % NOTE: Can use disprarityBM or disparitySGM
@@ -258,3 +266,35 @@ imshow(disparityMap,disparityRange)
 title("Disparity Map")
 colormap jet
 colorbar
+
+function cameraParams = CalibrateFromSquare(imageFileNames)
+
+    % Detect calibration pattern in images
+    detector = vision.calibration.monocular.CheckerboardDetector();
+    [imagePoints, imagesUsed] = detectPatternPoints(detector, imageFileNames);
+    imageFileNames = imageFileNames(imagesUsed);
+
+    % Read the first image to obtain image size
+    originalImage = imread(imageFileNames{1});
+    [mrows, ncols, ~] = size(originalImage);
+
+    % Generate world coordinates for the planar pattern keypoints
+    squareSize = 22;  % in units of 'mm'
+    worldPoints = generateWorldPoints(detector, 'SquareSize', squareSize);
+
+    % Calibrate the camera
+    [cameraParams, imagesUsed, estimationErrors] = estimateCameraParameters(imagePoints, worldPoints, ...
+    'EstimateSkew', false, 'EstimateTangentialDistortion', false, ...
+    'NumRadialDistortionCoefficients', 2, 'WorldUnits', 'mm', ...
+    'InitialIntrinsicMatrix', [], 'InitialRadialDistortion', [], ...
+    'ImageSize', [mrows, ncols]);
+
+    % % View reprojection errors
+    % h1=figure; showReprojectionErrors(cameraParams);
+
+    % % Visualize pattern locations
+    % h2=figure; showExtrinsics(cameraParams, 'CameraCentric');
+
+    % % Display parameter estimation errors
+    % displayErrors(estimationErrors, cameraParams);
+end
