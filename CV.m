@@ -215,182 +215,105 @@ line(points(:,[1,3])',points(:,[2,4])');
 scatter(matched_points_right_inliers.Location(:, 1), matched_points_right_inliers.Location(:, 2), 'MarkerFaceColor', 'r')
 
 
-%% TASK 5: 3D Geometry - REV 1
+%% --------------- Task 5: Stereo Geometry ------------------
 
-% Rectifying Images
-% leftImages = imageDatastore("source_images\left\");
-% rightImages = imageDatastore("source_images\right\");
+close all
 
-% [imagePoints,boardSize] = detectCheckerboardPoints(leftImages.Files,rightImages.Files);
+imgLeft = imread("source_images\additional_FD\11_03_24.png");
+imgRight = imread("source_images\additional_FD\11_03_24 (8).png");
 
-% squareSizeInMillimeters = 22;  % in units of 'mm'
-% worldPoints = generateCheckerboardPoints(boardSize,squareSizeInMillimeters);
+imgLeftGray = im2gray(imgLeft);
+imgRightGray = im2gray(imgRight);
 
-% I1 = readimage(leftImages,1);
-% I2 = readimage(rightImages,1);
-% imageSize = [size(I1,1),size(I1,2)];
+% figure;
+% imshowpair(imgLeft, imgRight, 'montag');
 
-% stereoParams = estimateCameraParameters(imagePoints,worldPoints,ImageSize=imageSize);
+% figure 
+% imgSstereoAnaglyph(imgLeft, imgRight)
+% imshow(stereoAnaglyph(imgLeft, imgRight))
+% title("Composite Image (Red - Left Image, Cyan - Right Image)")
 
-% [img1_FD_valid, img2_FD_valid] = rectifyStereoImages(img1_FD, img2_FD, stereoParams, OutputView='valid');
+pointsLeft = detectSURFFeatures(imgLeftGray,MetricThreshold=1000);
+pointsRight = detectSURFFeatures(imgRightGray,MetricThreshold=1000);
 
-% Estimating Depth
-% NOTE: Can use disprarityBM or disparitySGM
+% figure 
+% subplot(1, 2, 1)
+% imshow(imgLeft)
+% hold on
+% plot(selectStrongest(pointsLeft,20))
 
-% A = stereoAnaglyph(img1_FD_valid,img2_FD_valid);
+% subplot(1, 2, 2)
+% imshow(imgRight)
+% hold on
+% plot(selectStrongest(pointsRight,20))
 
-% stereoCameraCalibrator("source_images\left\", "source_images\right\", 22)
+[featuresLeft, validFeaturesLeft] = extractFeatures(imgLeftGray, pointsLeft);
+[featuresRight, validFeaturesRight] = extractFeatures(imgRightGray, pointsRight);
 
-% Define images to process
-% imageFileNames1 = {'source_images\left\WhatsApp Image 2024-03-08 at 18.23.32 (1).jpeg',...
-%     'source_images\left\WhatsApp Image 2024-03-08 at 18.23.32.jpeg',...
-%     };
-% imageFileNames2 = {'source_images\right\WhatsApp Image 2024-03-08 at 18.23.30.jpeg',...
-%     'source_images\right\WhatsApp Image 2024-03-08 at 18.23.31 (1).jpeg',...
-%     };
+indexPairs = matchFeatures(featuresLeft, featuresRight, Metric="SAD", MatchThreshold=5);
 
-% imageFileNames1 = {'source_images\additional_FD\11_03_24.png'};
-% imageFileNames2 = {'source_images\additional_FD\11_03_24 (8).png'};
+matchedPointsLeft = validFeaturesLeft(indexPairs(:,1),:);
+matchedPointsRight = validFeaturesRight(indexPairs(:,2),:);
 
-% % Detect calibration pattern in images
-% detector = vision.calibration.stereo.CheckerboardDetector();
-% [imagePoints, imagesUsed] = detectPatternPoints(detector, imageFileNames1, imageFileNames2);
-
-% % Generate world coordinates for the planar patten keypoints
-% squareSize = 22;  % in units of 'mm'
-% worldPoints = generateWorldPoints(detector, 'SquareSize', squareSize);
-
-% % Read one of the images from the first stereo pair
-% I1 = imread(imageFileNames1{1});
-% [mrows, ncols, ~] = size(I1);
-
-% % Calibrate the camera
-% [stereoParams, pairsUsed, estimationErrors] = estimateCameraParameters(imagePoints, worldPoints, ...
-%     'EstimateSkew', false, 'EstimateTangentialDistortion', false, ...
-%     'NumRadialDistortionCoefficients', 2, 'WorldUnits', 'mm', ...
-%     'InitialIntrinsicMatrix', [], 'InitialRadialDistortion', [], ...
-%     'ImageSize', [mrows, ncols]);
+% figure 
+% showMatchedFeatures(imgLeft, imgRight, matchedPointsLeft, matchedPointsRight)
 
 
 
-% img1_FD = imread("source_images\additional_FD\11_03_24.png");
-% img2_FD = imread("source_images\additional_FD\11_03_24 (8).png");
+[fMatrix, epipolarInliers, status] = estimateFundamentalMatrix(...
+  matchedPointsLeft,matchedPointsRight,Method="RANSAC", ...
+  NumTrials=10000,DistanceThreshold=0.1,Confidence=99.99);
+  
+if status ~= 0 || isEpipoleInImage(fMatrix,size(imgLeft)) ...
+  || isEpipoleInImage(fMatrix',size(imgRight))
+  error(["Not enough matching points were found or "...
+         "the epipoles are inside the images. Inspect "...
+         "and improve the quality of detected features ",...
+         "and images."]);
+end
 
-% A = stereoAnaglyph(img1_FD,img2_FD);
-% figure
-% imshow(A)
-% title("Red-Cyan Composite View of the Rectified Stereo Pair Image")
-
-
-% img1_FD = imresize(img1_FD, [mrows, ncols]);
-% img2_FD = imresize(img2_FD, [mrows, ncols]);
-% [J1, J2, reprojectionMatrix] = rectifyStereoImages(img1_FsD, img2_FD, stereoParams);
-
-% % J1 = im2gray(imread("source_images\IMG_20240316_181241.jpg"));
-% % J2 = im2gray(imread("source_images\IMG_20240316_181246.jpg"));
+inlierPointsLeft = matchedPointsLeft(epipolarInliers, :);
+inlierPointsRight = matchedPointsRight(epipolarInliers, :);
 
 % figure
-% A = stereoAnaglyph(J1,J2);
-% figure
-% imshow(A)
-% title("Red-Cyan Composite View of the Rectified Stereo Pair Image")
+% showMatchedFeatures(imgLeft, imgRight, inlierPointsLeft, inlierPointsRight)
 
-% J1 = im2gray(J1);
-% J2 = im2gray(J2);
+[tform1, tform2] = estimateStereoRectification(fMatrix, inlierPointsLeft.Location, ...
+    inlierPointsRight.Location, size(imgRight));
 
+[imgLeftRect, imgRightRect] = rectifyStereoImages(imgLeft,imgRight, tform1,tform2);
 
+epiLinesLeft = epipolarLine(fMatrix ,inlierPointsLeft);
+pointsLeft = lineToBorderPoints(epiLinesLeft,size(imgLeftRect));
 
-% disparityRange = [0 100];
-% disparityMap = disparityBM(J1,J2);
-
-% figure
-% imshow(disparityMap,disparityRange)
-% title("Disparity Map")
-% colormap jet
-% colorbar
-
-%% TASK 5: Stereo Detection
-
-% Auto-generated by stereoCalibrator app on 18-Mar-2024
-%-------------------------------------------------------
-
-% leftFileNames = "source_images\IMG_20240318_183610.jpg";
-% rightFileNames = "source_images\IMG_20240318_183605.jpg";
-
-% Define images to process
-leftFileNames = {'source_images\left_grid_on_wall\WhatsApp Image 2024-03-17 at 14.12.26.jpeg',...
-    'source_images\left_grid_on_wall\WhatsApp Image 2024-03-17 at 14.12.28 (1).jpeg',...
-    'source_images\left_grid_on_wall\WhatsApp Image 2024-03-17 at 14.12.28.jpeg',...
-    'source_images\left_grid_on_wall\WhatsApp Image 2024-03-17 at 14.12.30.jpeg',...
-    'source_images\left_grid_on_wall\WhatsApp Image 2024-03-17 at 14.12.31 (1).jpeg',...
-    };
-rightFileNames = {'source_images\right_grid_on_wall\WhatsApp Image 2024-03-17 at 14.12.27.jpeg',...
-    'source_images\right_grid_on_wall\WhatsApp Image 2024-03-17 at 14.12.28 (2).jpeg',...
-    'source_images\right_grid_on_wall\WhatsApp Image 2024-03-17 at 14.12.29.jpeg',...
-    'source_images\right_grid_on_wall\WhatsApp Image 2024-03-17 at 14.12.31 (2).jpeg',...
-    'source_images\right_grid_on_wall\WhatsApp Image 2024-03-17 at 14.12.31.jpeg',...
-    };
-
-img_left = imread("source_images\additional_FD\11_03_24.png");
-img_right = imread("source_images\additional_FD\11_03_24 (8).png");
-
-% Detect calibration pattern in images
-detector = vision.calibration.stereo.CheckerboardDetector();
-[imagePoints, imagesUsed] = detectPatternPoints(detector, leftFileNames, rightFileNames);
-
-% Generate world coordinates for the planar patten keypoints
-squareSize = 22;  % in units of 'mm'
-worldPoints = generateWorldPoints(detector, 'SquareSize', squareSize);
-
-% Read one of the images from the first stereo pair
-I1 = imread(leftFileNames{1});
-[mrows, ncols, ~] = size(I1);
-[mrows, ncols, ~] = size(img_left);
-
-% Calibrate the camera
-[stereoParams, pairsUsed, estimationErrors] = estimateCameraParameters(imagePoints, worldPoints, ...
-    'EstimateSkew', false, 'EstimateTangentialDistortion', false, ...
-    'NumRadialDistortionCoefficients', 2, 'WorldUnits', 'mm', ...
-    'InitialIntrinsicMatrix', [], 'InitialRadialDistortion', [], ...
-    'ImageSize', [mrows, ncols]);
-
-% You can use the calibration data to rectify stereo images.
-% I2 = imread(rightFileNames{1});
-% figure
-% montage({I1, I2})
-
-% [J1, J2] = rectifyStereoImages(I1, I2, stereoParams);
-
-% figure
-% montage({J1, J2})
+epiLinesRight = epipolarLine(fMatrix ,inlierPointsRight);
+pointsRight = lineToBorderPoints(epiLinesLeft,size(imgRightRect));
 
 
 figure
-montage({img_left, img_right});
+hold on;
+title("Stereo Rectified Images")
+subplot(1, 2, 1)
+imshow(imgLeftRect)
+hold on;
+line(pointsLeft(:,[1,3])',pointsLeft(:,[2,4])');
+subplot(1, 2, 2)
+imshow(imgRightRect)
+line(pointsRight(:,[1,3])',pointsRight(:,[2,4])');
 
-img_left = imresize(img_left, [mrows, ncols]);
-img_right = imresize(img_right, [mrows, ncols]);
+imgLeftRectGray = im2gray(imgLeftRect);
+imgRightRectGray = im2gray(imgRightRect);
 
-img_left = im2gray(img_left);
-img_right = im2gray(img_right);
-
-[img_left, img_right, ~] = rectifyStereoImages(img_left, img_right, stereoParams);
-figure
-montage({img_left, img_right});
-
-A = stereoAnaglyph(img_left,img_right);
-figure
-imshow(A)
-title("Red-Cyan Composite View of the Rectified Stereo Pair Image")
-
-disparityRange = [0 100];
-disparityMap = disparityBM(img_left, img_right);
+disparityRange = [0 40];
+disparityMap = disparityBM(imgLeftRectGray, imgRightRectGray);
 
 figure
 imshow(disparityMap,disparityRange)
 title("Disparity Map")
 colormap jet
 colorbar
+
+
 
 
 %% ---------------------- FUNCTIONS ---------------------------------
