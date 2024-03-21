@@ -284,7 +284,7 @@ inlierPointsRight = matchedPointsRight(epipolarInliers, :);
 [imgLeftRect, imgRightRect] = rectifyStereoImages(imgLeft,imgRight, tform1,tform2);
 
 epiLinesLeft = epipolarLine(fMatrix ,inlierPointsLeft);
-pointsLeft = lineToBorderPoints(epiLinesLeft,size(imgLeftRect));
+pointsLeft = lineToBorderPoints(epiLinesLeft,siMaze(imgLeftRect));
 
 epiLinesRight = epipolarLine(fMatrix ,inlierPointsRight);
 pointsRight = lineToBorderPoints(epiLinesLeft,size(imgRightRect));
@@ -312,6 +312,8 @@ imshow(disparityMap,disparityRange)
 title("Disparity Map")
 colormap jet
 colorbar
+
+
 
 
 
